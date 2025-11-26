@@ -1,15 +1,19 @@
 const User=require("../models/userSchema")
 const bcrypt=require("bcrypt");
 const jwt = require("jsonwebtoken");
+  
+
+console.log(process.env.REFRESH_TOKEN_SECRET);
+console.log(process.env.ACCESS_TOKEN_SECRET);
 
 const generateaccessToken=(userId)=>{
-    return jwt.sign({userId},"abcdefgh",{
+    return jwt.sign({userId},process.env.ACCESS_TOKEN_SECRET,{
         expiresIn:"1m",
     });
 };
 
 const generateRefreshToken=(userId)=>{
-    return jwt.sign({userId},"abcdef",{
+    return jwt.sign({userId},process.env.REFRESH_TOKEN_SECRET,{
         expiresIn:"7d",
     });
 };
@@ -109,12 +113,14 @@ const generateRefreshToken=(userId)=>{
         try{
             const {refreshToken}=req.body;
 
+            console.log(refreshToken);
+
             if(!refreshToken){
                 return res.status(401).json({message:"refresh token is required"});
             }
             jwt.verify(
                 refreshToken,
-                "abcde",
+                process.env.REFRESH_TOKEN_SECRET,
                 async(err,decoded)=>{
                     if(err){
                         console.log("refresh token verify error",err);
@@ -130,11 +136,12 @@ const generateRefreshToken=(userId)=>{
                         res.status(403).json({message:"refresh token not find"});
                     }
                     const accessToken=generateaccessToken(user._id);
-                    const refreshToken=generateRefreshToken(user._id);
+                    const newRefreshToken=generateRefreshToken(user._id);
             
-            
-                    user.refreshToken=refreshToken;
+                    user.refreshToken=newRefreshToken;
+                    console.log(user.refreshToken);
                     await user.save();
+                  
             
                     return res.status(201).json({
                         message:"user registered successfully",
@@ -144,7 +151,7 @@ const generateRefreshToken=(userId)=>{
                             email:user.email,
                         },
                         accessToken,
-                        refreshToken,
+                        refreshToken:newRefreshToken,
                     });
                  
                 }
